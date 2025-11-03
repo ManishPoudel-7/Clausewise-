@@ -1,0 +1,33 @@
+# --- Python ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pdb
+
+# --- Virtual Environment ---
+myenv/
+.env/
+.env
+
+# --- VSCode settings ---
+.vscode/
+*.code-workspace
+
+# --- OS files ---
+.DS_Store
+Thumbs.db
+
+# --- Logs and temp files ---
+*.log
+*.tmp
+*.bak
+*.swp
+
+# --- Dependencies ---
+site-packages/
+
+
+# --- Documentation ---
+Documentation/
+
