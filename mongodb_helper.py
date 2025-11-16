@@ -5,11 +5,15 @@ import os
 import json
 import gridfs
 import pickle
+import certifi
 
 class MongoDBHelper:
     def __init__(self, connection_string):
         """Initialize MongoDB connection"""
-        self.client = MongoClient(connection_string)
+        self.client = MongoClient(
+            connection_string,
+            tlsCAFile=certifi.where()
+        )
         self.db = self.client['clausewise_db']
         
         # Collections

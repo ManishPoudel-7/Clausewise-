@@ -284,7 +284,7 @@ def run_langchain_app():
 
                     progress_bar.progress(25)
                     status_text.success("✅ **Step 1 Complete:** Document summary generated!")
-                    time.sleep(0.5)l 
+                    time.sleep(0.5) 
 
                     status_text.info("⚖️ **Step 2/5:** Evaluating legal risks...")
                     progress_bar.progress(35)

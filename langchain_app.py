@@ -1,10 +1,10 @@
+# type: ignore[unused-ignore]
 import streamlit as st
 from langchain_community.document_loaders import PyPDFLoader, TextLoader, Docx2txtLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
-from sentence_transformers import SentenceTransformer
-from langchain_core.documents import Document
 from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_core.documents import Document
 from typing import TypedDict, Annotated
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
@@ -20,7 +20,7 @@ import requests
 import base64
 import io
 import wave
-from google import genai
+from google.genai import Client
 from google.genai import types
 
 load_dotenv()
@@ -46,10 +46,10 @@ def generate_speech_data_url(text, voice='Kore'):
             st.error("Please set GOOGLE_API_KEY in your .env file")
             return None
             
-        client = genai.Client(api_key=api_key)
+        client = Client(api_key=api_key)
         
         response = client.models.generate_content(
-            model="gemini-2.5-flash-preview-tts",
+            model="gemini-2.5-flash-preview-tts",  # Use the correct model name
             contents=f"Read this summary clearly: {text}",
             config=types.GenerateContentConfig(
                 response_modalities=["AUDIO"],
@@ -82,8 +82,7 @@ def generate_speech_data_url(text, voice='Kore'):
     except Exception as e:
         st.error(f"Error generating speech: {str(e)}")
         return None
-
-
+    
 def run_langchain_app():
     apiKey = os.getenv('GROQ_API_KEY')
     if not apiKey:
