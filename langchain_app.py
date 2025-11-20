@@ -41,33 +41,36 @@ def generate_speech_data_url(text, voice="Kore"):
     try:
         api_key = os.getenv("GOOGLE_API_KEY")
         if not api_key:
-            st.error("GOOGLE_API_KEY missing in Streamlit Secrets")
+            st.error("GOOGLE_API_KEY missing")
             return None
 
         genai.configure(api_key=api_key)
 
-        model = genai.GenerativeModel("gemini-2.0-flash-tts")
+        # Correct model name (working)
+        model = genai.GenerativeModel("gemini-1.5-flash-8b-tts")
 
         response = model.generate_content(
             text,
             generation_config={
                 "response_modalities": ["AUDIO"],
                 "speech_config": {
-                    "voice": {"name": voice}
+                    "voice": {
+                        "name": voice
+                    }
                 }
             }
         )
 
-        # Extract Base64 PCM audio
+        # Extract base64 audio
         audio_b64 = response.candidates[0].content.parts[0].inline_data.data
         audio_bytes = base64.b64decode(audio_b64)
 
-        # Convert to WAV format
+        # Convert to wav
         buffer = io.BytesIO()
         with wave.open(buffer, "wb") as wf:
             wf.setnchannels(1)
-            wf.setsampwidth(2)     # 16-bit
-            wf.setframerate(24000) # 24kHz
+            wf.setsampwidth(2)
+            wf.setframerate(24000)
             wf.writeframes(audio_bytes)
 
         wav_data = buffer.getvalue()
@@ -76,6 +79,7 @@ def generate_speech_data_url(text, voice="Kore"):
     except Exception as e:
         st.error(f"Error generating speech: {e}")
         return None
+
     
 def run_langchain_app():
     apiKey = os.getenv('GROQ_API_KEY')
