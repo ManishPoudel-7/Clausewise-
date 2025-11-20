@@ -21,7 +21,6 @@ import base64
 import io
 import wave
 import google.generativeai as genai
-from google.genai import types
 
 load_dotenv()
 
