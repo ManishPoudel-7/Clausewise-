@@ -20,7 +20,7 @@ import requests
 import base64
 import io
 import wave
-from google.genai import Client
+import google.generativeai as genai
 from google.genai import types
 
 load_dotenv()
@@ -38,49 +38,49 @@ def get_embedding_model():
     return HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
 
-def generate_speech_data_url(text, voice='Kore'):
-    """Generate speech from text and return as data URL for HTML5 audio"""
+def generate_speech_data_url(text, voice="Kore"):
+    """Generate speech from text using Gemini TTS and return a data URL."""
     try:
-        api_key = os.getenv('GOOGLE_API_KEY')
+        api_key = os.getenv("GOOGLE_API_KEY")
         if not api_key:
-            st.error("Please set GOOGLE_API_KEY in your .env file")
+            st.error("GOOGLE_API_KEY not found in environment")
             return None
-            
-        client = Client(api_key=api_key)
-        
-        response = client.models.generate_content(
-            model="gemini-2.5-flash-preview-tts",  # Use the correct model name
-            contents=f"Read this summary clearly: {text}",
-            config=types.GenerateContentConfig(
-                response_modalities=["AUDIO"],
-                speech_config=types.SpeechConfig(
-                    voice_config=types.VoiceConfig(
-                        prebuilt_voice_config=types.PrebuiltVoiceConfig(
-                            voice_name=voice
-                        )
-                    )
-                ),
-            )
+
+        genai.configure(api_key=api_key)
+
+        model = genai.GenerativeModel("gemini-2.0-flash-tts")
+
+        response = model.generate_content(
+            text,
+            generation_config={
+                "response_modalities": ["AUDIO"],
+                "audio_config": {
+                    "voice_name": voice
+                }
+            }
         )
-        
-        # Get the audio data
-        audio_data = response.candidates[0].content.parts[0].inline_data.data
-        
-        # Create WAV file in memory
+
+        # Extract base64 audio bytes
+        audio_b64 = response.candidates[0].content.parts[0].inline_data.data
+
+        # Decode bytes
+        audio_bytes = base64.b64decode(audio_b64)
+
+        # Convert raw audio to WAV
         buffer = io.BytesIO()
-        with wave.open(buffer, 'wb') as wf:
-            wf.setnchannels(1)  # Mono
-            wf.setsampwidth(2)  # 16-bit
-            wf.setframerate(24000)  # 24kHz
-            wf.writeframes(audio_data)
-        
-        # Convert to base64 for data URL
+        with wave.open(buffer, "wb") as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)     # 16-bit
+            wf.setframerate(24000) # 24 KHz
+            wf.writeframes(audio_bytes)
+
+        # Encode WAV for HTML <audio>
         wav_data = buffer.getvalue()
-        b64_data = base64.b64encode(wav_data).decode()
-        return f"data:audio/wav;base64,{b64_data}"
-        
+        encoded = base64.b64encode(wav_data).decode()
+        return f"data:audio/wav;base64,{encoded}"
+
     except Exception as e:
-        st.error(f"Error generating speech: {str(e)}")
+        st.error(f"Error generating speech: {e}")
         return None
     
 def run_langchain_app():
@@ -731,8 +731,8 @@ def run_langchain_app():
                     result = retriever.invoke(userQuery)
                     content = "\n".join([doc.page_content for doc in result])
                     
-                    for i, doc in enumerate(result):
-                        st.write(f"Chunk {i} Score:", doc.metadata.get("score", "N/A"))
+                    # for i, doc in enumerate(result):
+                    #     st.write(f"Chunk {i} Score:", doc.metadata.get("score", "N/A"))
 
                     context_text = ""
                     if len(st.session_state.chat_messages) > 1:
