@@ -730,6 +730,9 @@ def run_langchain_app():
 
                     result = retriever.invoke(userQuery)
                     content = "\n".join([doc.page_content for doc in result])
+                    
+                    for i, doc in enumerate(result):
+                        st.write(f"Chunk {i} Score:", doc.metadata.get("score", "N/A"))
 
                     context_text = ""
                     if len(st.session_state.chat_messages) > 1:

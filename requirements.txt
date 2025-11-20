@@ -9,7 +9,7 @@ langchain==1.0.5
 langchain-community==0.4.1
 langchain-core==1.0.4
 langchain-text-splitters==1.0.0
-langchain-groq==0.3.4
+langchain-groq==0.3.5
 langchain-huggingface==0.1.2
 
 faiss-cpu==1.12.0
