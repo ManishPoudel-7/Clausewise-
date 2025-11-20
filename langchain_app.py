@@ -38,11 +38,10 @@ def get_embedding_model():
 
 
 def generate_speech_data_url(text, voice="Kore"):
-    """Generate speech from text using Gemini TTS and return a data URL."""
     try:
         api_key = os.getenv("GOOGLE_API_KEY")
         if not api_key:
-            st.error("GOOGLE_API_KEY not found in environment")
+            st.error("GOOGLE_API_KEY missing in Streamlit Secrets")
             return None
 
         genai.configure(api_key=api_key)
@@ -53,30 +52,26 @@ def generate_speech_data_url(text, voice="Kore"):
             text,
             generation_config={
                 "response_modalities": ["AUDIO"],
-                "audio_config": {
-                    "voice_name": voice
+                "speech_config": {
+                    "voice": {"name": voice}
                 }
             }
         )
 
-        # Extract base64 audio bytes
+        # Extract Base64 PCM audio
         audio_b64 = response.candidates[0].content.parts[0].inline_data.data
-
-        # Decode bytes
         audio_bytes = base64.b64decode(audio_b64)
 
-        # Convert raw audio to WAV
+        # Convert to WAV format
         buffer = io.BytesIO()
         with wave.open(buffer, "wb") as wf:
             wf.setnchannels(1)
             wf.setsampwidth(2)     # 16-bit
-            wf.setframerate(24000) # 24 KHz
+            wf.setframerate(24000) # 24kHz
             wf.writeframes(audio_bytes)
 
-        # Encode WAV for HTML <audio>
         wav_data = buffer.getvalue()
-        encoded = base64.b64encode(wav_data).decode()
-        return f"data:audio/wav;base64,{encoded}"
+        return f"data:audio/wav;base64,{base64.b64encode(wav_data).decode()}"
 
     except Exception as e:
         st.error(f"Error generating speech: {e}")
