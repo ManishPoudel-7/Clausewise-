@@ -20,7 +20,8 @@ import requests
 import base64
 import io
 import wave
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
 load_dotenv()
 
@@ -37,50 +38,55 @@ def get_embedding_model():
     return HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
 
-def generate_speech_data_url(text, voice="Kore"):
+def generate_speech_data_url(text, voice='Kore'):
+    """Generate speech from text and return as data URL for HTML5 audio"""
     try:
-        api_key = os.getenv("GOOGLE_API_KEY")
+        api_key = os.getenv('GOOGLE_API_KEY')
         if not api_key:
-            st.error("GOOGLE_API_KEY missing")
+            st.error("Please set GOOGLE_API_KEY in your .env file")
             return None
-
-        genai.configure(api_key=api_key)
-
-        # Correct model name (working)
-        model = genai.GenerativeModel("gemini-1.5-flash-8b-tts")
-
-        response = model.generate_content(
-            text,
-            generation_config={
-                "response_modalities": ["AUDIO"],
-                "speech_config": {
-                    "voice": {
-                        "name": voice
-                    }
-                }
-            }
+            
+        client = genai.Client(api_key=api_key)
+        
+        response = client.models.generate_content(
+            model="gemini-2.5-flash-preview-tts",
+            contents=text,
+            config=types.GenerateContentConfig(
+                response_modalities=["AUDIO"],
+                speech_config=types.SpeechConfig(
+                    voice_config=types.VoiceConfig(
+                        prebuilt_voice_config=types.PrebuiltVoiceConfig(
+                            voice_name=voice
+                        )
+                    )
+                ),
+            )
         )
-
-        # Extract base64 audio
-        audio_b64 = response.candidates[0].content.parts[0].inline_data.data
-        audio_bytes = base64.b64decode(audio_b64)
-
-        # Convert to wav
+        
+        # Get the raw PCM audio data
+        audio_data = response.candidates[0].content.parts[0].inline_data.data
+        
+        # Convert PCM to WAV format in memory
+        import wave
+        import io
+        
         buffer = io.BytesIO()
-        with wave.open(buffer, "wb") as wf:
-            wf.setnchannels(1)
-            wf.setsampwidth(2)
-            wf.setframerate(24000)
-            wf.writeframes(audio_bytes)
-
+        with wave.open(buffer, 'wb') as wf:
+            wf.setnchannels(1)  # Mono
+            wf.setsampwidth(2)  # 16-bit
+            wf.setframerate(24000)  # 24kHz
+            wf.writeframes(audio_data)
+        
+        # Convert to base64 for data URL
         wav_data = buffer.getvalue()
-        return f"data:audio/wav;base64,{base64.b64encode(wav_data).decode()}"
-
+        b64_data = base64.b64encode(wav_data).decode()
+        return f"data:audio/wav;base64,{b64_data}"
+        
     except Exception as e:
-        st.error(f"Error generating speech: {e}")
+        st.error(f"Error generating speech: {str(e)}")
         return None
 
-    
+
 def run_langchain_app():
     apiKey = os.getenv('GROQ_API_KEY')
     if not apiKey:
@@ -510,6 +516,11 @@ def run_langchain_app():
                         chunk_overlap=100
                     )
                     chunks = splitter.split_documents(docs)
+
+                    for model in genai.list_models():
+                        if 'generateContent' in model.supported_generation_methods:
+                            print(f"{model.name} - {model.supported_generation_methods}")
+
 
                     embedding = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
                     st.info("✅ Embedding Created Successfully")
