@@ -38,38 +38,44 @@ def get_embedding_model():
     return HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
 
-def generate_speech_data_url(text, voice='Kore'):
-    """Generate speech from text and return as data URL for HTML5 audio"""
+# Add this import at the top
+from murf import Murf, MurfRegion
+
+# Replace the generate_speech_data_url function with this:
+def generate_speech_data_url(text, voice='Matthew'):
+    """Generate speech from text using Murf.ai and return as data URL for HTML5 audio"""
     try:
-        api_key = os.getenv('GOOGLE_API_KEY')
+        api_key = os.getenv('MURF_API_KEY')
         if not api_key:
-            st.error("Please set GOOGLE_API_KEY in your .env file")
+            st.error("Please set MURF_API_KEY in your .env file")
             return None
-            
-        client = genai.Client(api_key=api_key)
         
-        response = client.models.generate_content(
-            model="gemini-2.5-flash-preview-tts",
-            contents=text,
-            config=types.GenerateContentConfig(
-                response_modalities=["AUDIO"],
-                speech_config=types.SpeechConfig(
-                    voice_config=types.VoiceConfig(
-                        prebuilt_voice_config=types.PrebuiltVoiceConfig(
-                            voice_name=voice
-                        )
-                    )
-                ),
-            )
+        # Initialize Murf client
+        client = Murf(
+            api_key=api_key,
+            region=MurfRegion.GLOBAL  # Change to MurfRegion.IN for India
         )
         
-        # Get the raw PCM audio data
-        audio_data = response.candidates[0].content.parts[0].inline_data.data
+        # Get audio stream from Murf
+        audio_stream = client.text_to_speech.stream(
+            text=text,
+            voice_id=voice, 
+            model="FALCON",
+            multi_native_locale="en-US",
+            sample_rate=24000,
+            format="PCM"
+        )
         
-        # Convert PCM to WAV format in memory
-        import wave
-        import io
+        # Collect all audio chunks
+        audio_chunks = []
+        for chunk in audio_stream:
+            if chunk:
+                audio_chunks.append(chunk)
         
+        # Combine all chunks
+        audio_data = b''.join(audio_chunks)
+        
+        # Convert PCM to WAV format
         buffer = io.BytesIO()
         with wave.open(buffer, 'wb') as wf:
             wf.setnchannels(1)  # Mono
@@ -77,13 +83,15 @@ def generate_speech_data_url(text, voice='Kore'):
             wf.setframerate(24000)  # 24kHz
             wf.writeframes(audio_data)
         
-        # Convert to base64 for data URL
+        # Convert to base64 for HTML5 audio player
         wav_data = buffer.getvalue()
         b64_data = base64.b64encode(wav_data).decode()
         return f"data:audio/wav;base64,{b64_data}"
         
     except Exception as e:
-        st.error(f"Error generating speech: {str(e)}")
+        st.error(f"Error generating speech with Murf.ai: {str(e)}")
+        import traceback
+        st.error(traceback.format_exc())
         return None
 
 

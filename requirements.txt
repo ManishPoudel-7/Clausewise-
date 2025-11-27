@@ -22,9 +22,7 @@ sentence-transformers==5.1.2
 torch==2.1.0+cpu
 transformers==4.57.1
 
-google-generativeai
-google-genai==1.0.0
-googleapis-common-protos
+murf
 
 numpy==1.26.4
 pandas==2.3.3

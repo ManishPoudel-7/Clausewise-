@@ -1,10 +1,10 @@
+# type: ignore[unused-ignore]
 import streamlit as st
 from langchain_community.document_loaders import PyPDFLoader, TextLoader, Docx2txtLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
-from sentence_transformers import SentenceTransformer
-from langchain_core.documents import Document
 from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_core.documents import Document
 from typing import TypedDict, Annotated
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
@@ -50,7 +50,7 @@ def generate_speech_data_url(text, voice='Kore'):
         
         response = client.models.generate_content(
             model="gemini-2.5-flash-preview-tts",
-            contents=f"Read this summary clearly: {text}",
+            contents=text,
             config=types.GenerateContentConfig(
                 response_modalities=["AUDIO"],
                 speech_config=types.SpeechConfig(
@@ -63,10 +63,13 @@ def generate_speech_data_url(text, voice='Kore'):
             )
         )
         
-        # Get the audio data
+        # Get the raw PCM audio data
         audio_data = response.candidates[0].content.parts[0].inline_data.data
         
-        # Create WAV file in memory
+        # Convert PCM to WAV format in memory
+        import wave
+        import io
+        
         buffer = io.BytesIO()
         with wave.open(buffer, 'wb') as wf:
             wf.setnchannels(1)  # Mono
@@ -184,12 +187,17 @@ def run_langchain_app():
                         with open(temp_filename, "wb") as file:
                             file.write(uploadedFile.read())
 
-                        if uploadedFile.type == "application/pdf":
+                        # FIXED: Use file extension instead of MIME type for reliability
+                        extension = os.path.splitext(uploadedFile.name)[1].lower()
+                        if extension == '.pdf':
                             loader = PyPDFLoader(temp_filename)
-                        elif uploadedFile.type == "text/plain":
+                        elif extension == '.txt':
                             loader = TextLoader(temp_filename)
-                        elif uploadedFile.type in ["application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/msword"]:
+                        elif extension in ['.docx', '.doc']:
                             loader = Docx2txtLoader(temp_filename)
+                        else:
+                            st.error(f"Unsupported file type: {extension}")
+                            return
                         
                         docs = loader.load()
                         
@@ -245,12 +253,17 @@ def run_langchain_app():
                     with open(temp_filename, "wb") as file:
                         file.write(uploadedFile.read())
 
-                    if uploadedFile.type == "application/pdf":
+                    # FIXED: Use file extension instead of MIME type for reliability
+                    extension = os.path.splitext(uploadedFile.name)[1].lower()
+                    if extension == '.pdf':
                         loader = PyPDFLoader(temp_filename)
-                    elif uploadedFile.type == "text/plain":
+                    elif extension == '.txt':
                         loader = TextLoader(temp_filename)
-                    elif uploadedFile.type in ["application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/msword"]:
+                    elif extension in ['.docx', '.doc']:
                         loader = Docx2txtLoader(temp_filename)
+                    else:
+                        st.error(f"Unsupported file type: {extension}")
+                        return
                     
                     # Load docs for ALL file types
                     docs = loader.load()
@@ -284,7 +297,7 @@ def run_langchain_app():
 
                     progress_bar.progress(25)
                     status_text.success("✅ **Step 1 Complete:** Document summary generated!")
-                    time.sleep(0.5) 
+                    time.sleep(0.5)
 
                     status_text.info("⚖️ **Step 2/5:** Evaluating legal risks...")
                     progress_bar.progress(35)
@@ -504,6 +517,11 @@ def run_langchain_app():
                     )
                     chunks = splitter.split_documents(docs)
 
+                    for model in genai.list_models():
+                        if 'generateContent' in model.supported_generation_methods:
+                            print(f"{model.name} - {model.supported_generation_methods}")
+
+
                     embedding = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
                     st.info("✅ Embedding Created Successfully")
 
@@ -721,6 +739,9 @@ def run_langchain_app():
 
                     result = retriever.invoke(userQuery)
                     content = "\n".join([doc.page_content for doc in result])
+                    
+                    # for i, doc in enumerate(result):
+                    #     st.write(f"Chunk {i} Score:", doc.metadata.get("score", "N/A"))
 
                     context_text = ""
                     if len(st.session_state.chat_messages) > 1:
@@ -891,4 +912,3 @@ def run_langchain_app():
 
 if __name__ == "__main__":
     run_langchain_app()
-
