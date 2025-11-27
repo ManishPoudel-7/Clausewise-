@@ -25,9 +25,13 @@ from murf import Murf, MurfRegion
 load_dotenv()
 
 # Initialize MongoDB
-mongo_uri = os.getenv('MONGO_URI')
-db = MongoDBHelper(mongo_uri)
+GROQ_API_KEY = os.getenv('GROQ_API_KEY') or st.secrets.get('GROQ_API_KEY', '')
+MONGO_URI = os.getenv('MONGO_URI') or st.secrets.get('MONGO_URI', '')
+MURF_API_KEY = os.getenv('MURF_API_KEY') or st.secrets.get('MURF_API_KEY', '')
+db = MongoDBHelper(MONGO_URI)
 user_id = db.get_or_create_user_id()
+
+
 
 
 # Cache the embedding model to prevent reloading
@@ -40,7 +44,7 @@ def get_embedding_model():
 def generate_speech_data_url(text, voice='Matthew'):
     """Generate speech from text using Murf.ai and return as data URL for HTML5 audio"""
     try:
-        api_key = os.getenv('MURF_API_KEY')
+        api_key = MURF_API_KEY
         if not api_key:
             st.error("Please set MURF_API_KEY in your .env file")
             return None
@@ -91,7 +95,7 @@ def generate_speech_data_url(text, voice='Matthew'):
 
 
 def run_langchain_app():
-    apiKey = os.getenv('GROQ_API_KEY')
+    apiKey = GROQ_API_KEY
     if not apiKey:
         st.error("Please set GROQ_API_KEY in your .env file")
         st.stop()
