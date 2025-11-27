@@ -19,8 +19,8 @@ certifi
 dnspython==2.8.0
 
 sentence-transformers==5.1.2
-torch==2.1.0+cpu
-transformers==4.57.1
+torch==2.5.1+cpu
+transformers==4.46.0
 
 murf
 
