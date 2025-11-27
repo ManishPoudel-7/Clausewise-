@@ -20,8 +20,7 @@ import requests
 import base64
 import io
 import wave
-from google import genai
-from google.genai import types
+from murf import Murf, MurfRegion
 
 load_dotenv()
 
@@ -38,10 +37,6 @@ def get_embedding_model():
     return HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
 
-# Add this import at the top
-from murf import Murf, MurfRegion
-
-# Replace the generate_speech_data_url function with this:
 def generate_speech_data_url(text, voice='Matthew'):
     """Generate speech from text using Murf.ai and return as data URL for HTML5 audio"""
     try:
